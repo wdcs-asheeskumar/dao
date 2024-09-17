@@ -9,6 +9,8 @@ contract DSmartContract is ERC20 {
         address memberAddress;
         uint256 memberSince;
         uint256 tokens;
+        uint256[] noOfProposalsCreated;
+        uint256[] noOfProposalsVoted;
     }
 
     struct ProposalDetails {
@@ -21,7 +23,6 @@ contract DSmartContract is ERC20 {
 
     uint256 public memberId;
     uint256 public proposalId;
-    uint256 public votesNeeded;
 
     uint256 public totalTokens;
 
@@ -36,25 +37,26 @@ contract DSmartContract is ERC20 {
 
     constructor() ERC20("MyToken", "MTK") {}
 
-    function addMember(uint256 _tokens, address _membersAddress) public {
+    function addMember() public {
         require(
             membersList[msg.sender] == false,
             "member has already been registered"
         );
 
         memberId = memberId + 1;
-        memberDetails[memberId].memberAddress = _membersAddress;
+        memberDetails[memberId].memberAddress = msg.sender;
         memberDetails[memberId].memberSince = block.timestamp;
-        memberDetails[memberId].tokens = _tokens;
-        totalTokens = totalTokens + _tokens;
+        memberDetails[memberId].tokens = 100;
+        totalTokens = totalTokens + 100;
         totalActiveMembers = totalActiveMembers + 1;
         membersList[msg.sender] = true;
-        _mint(address(this), _tokens);
+        _mint(address(this), 100);
     }
 
     function createProposal(
         string memory _proposalDescription,
         uint256 _timePeriod,
+        uint256 _memberId,
         uint256 _tokensForProposal
     ) public {
         require(
@@ -73,6 +75,8 @@ contract DSmartContract is ERC20 {
         proposalDetails[proposalId].executedOrNot = false;
         totalTokens = totalTokens + _tokensForProposal;
         proposalVotingRecord[proposalId][msg.sender] = true;
+        memberDetails[memberId].noOfProposalsCreated.push(proposalId);
+        memberDetails[_memberId].noOfProposalsVoted.push(proposalId);
         _mint(address(this), _tokensForProposal);
     }
 
@@ -109,11 +113,12 @@ contract DSmartContract is ERC20 {
             proposalVotingRecord[_proposalId][msg.sender] == false,
             "member has already voted"
         );
-        
+
         proposalDetails[_proposalId].voteCount =
             proposalDetails[_proposalId].voteCount +
             1;
         proposalVotingRecord[_proposalId][msg.sender] = true;
+        memberDetails[memberId].noOfProposalsVoted.push(proposalId);
         _mint(address(this), proposalDetails[_proposalId].tokensForProposal);
     }
 
@@ -146,7 +151,21 @@ contract DSmartContract is ERC20 {
         );
         return memberDetails[_memberId].tokens;
     }
+
+    function checkExecutedOrNot(
+        uint256 _proposalId
+    ) public view returns (bool) {
+        return proposalDetails[_proposalId].executedOrNot;
+    }
 }
+
+// membersData struct -> to store the data of members
+// struct to store proposals details
+// memberId and proposalId as counters of members and proposals
+// total tokens to calculate total number of tokens in the contract
+// totalActiveMembers for keeping list of active members
+// proposalVotingRecord for keeping record of voting in each proposal
+// membersList list of members
 
 // addMembers() -> adding members, only the members which are part of it can add members
 // createProposal() -> only members can create a proposal.
