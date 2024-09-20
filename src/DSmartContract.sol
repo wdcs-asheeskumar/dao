@@ -1,6 +1,6 @@
 // SPDX-License-Identifier:MIT
 
-pragma solidity ^0.8.19;
+pragma solidity 0.8.20;
 
 import "../lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 
@@ -33,6 +33,7 @@ contract DSmartContract is ERC20 {
 
     mapping(uint256 => mapping(address => bool)) public proposalVotingRecord;
 
+    mapping(uint256 => bool) public proposalsList;
     mapping(address => bool) public membersList;
 
     constructor() ERC20("MyToken", "MTK") {}
@@ -63,6 +64,10 @@ contract DSmartContract is ERC20 {
             membersList[msg.sender] == true,
             "Only members can create a proposal"
         );
+        require(
+            proposalsList[proposalId] == false,
+            "Proposal already registered"
+        );
         proposalDetails[proposalId].proposalDescription = _proposalDescription;
         proposalDetails[proposalId].voteCount =
             proposalDetails[proposalId].voteCount +
@@ -77,6 +82,8 @@ contract DSmartContract is ERC20 {
         proposalVotingRecord[proposalId][msg.sender] = true;
         memberDetails[memberId].noOfProposalsCreated.push(proposalId);
         memberDetails[_memberId].noOfProposalsVoted.push(proposalId);
+        proposalsList[proposalId] = true;
+        proposalId = proposalId + 1;
         _mint(address(this), _tokensForProposal);
     }
 
@@ -119,6 +126,9 @@ contract DSmartContract is ERC20 {
             1;
         proposalVotingRecord[_proposalId][msg.sender] = true;
         memberDetails[memberId].noOfProposalsVoted.push(proposalId);
+        memberDetails[memberId].tokens =
+            memberDetails[memberId].tokens +
+            proposalDetails[_proposalId].tokensForProposal;
         _mint(address(this), proposalDetails[_proposalId].tokensForProposal);
     }
 
@@ -144,7 +154,7 @@ contract DSmartContract is ERC20 {
         proposalDetails[_proposalId].executedOrNot = true;
     }
 
-    function tokensLeft(uint256 _memberId) public view returns (uint256) {
+    function tokensStaked(uint256 _memberId) public view returns (uint256) {
         require(
             msg.sender == memberDetails[_memberId].memberAddress,
             "only member can view there tokens"
@@ -156,6 +166,21 @@ contract DSmartContract is ERC20 {
         uint256 _proposalId
     ) public view returns (bool) {
         return proposalDetails[_proposalId].executedOrNot;
+    }
+
+    function isMember(address _member) public view returns (bool) {
+        return membersList[_member];
+    }
+
+    function isProposal(uint256 _proposalId) public view returns (bool) {
+        return proposalsList[_proposalId];
+    }
+
+    function memberHasVotedOrNot(
+        uint256 _proposalId,
+        address memberAddr
+    ) public view returns (bool) {
+        return proposalVotingRecord[_proposalId][memberAddr];
     }
 }
 
