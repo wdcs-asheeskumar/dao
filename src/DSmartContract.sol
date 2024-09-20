@@ -115,7 +115,6 @@ contract DSmartContract is ERC20 {
         _mint(address(this), _tokensForProposal);
     }
 
-
     function voteProposal(uint256 _proposalId, uint256 _memberId) public {
         require(
             membersList[msg.sender] == true,
@@ -142,7 +141,7 @@ contract DSmartContract is ERC20 {
             1;
         proposalDetails[_proposalId].listOfMembersId.push(_memberId);
         proposalVotingRecord[_proposalId][msg.sender] = true;
-        
+
         memberDetails[_memberId].noOfProposalsVoted.push(proposalId);
         memberDetails[_memberId].tokensLocked =
             memberDetails[_memberId].tokensLocked +
@@ -213,6 +212,13 @@ contract DSmartContract is ERC20 {
                     .tokensLocked -
                 proposalDetails[_proposalId].tokensForProposal;
 
+            _approve(
+                address(this),
+                memberDetails[proposalDetails[_proposalId].listOfMembersId[i]]
+                    .memberAddress,
+                proposalDetails[_proposalId].tokensForProposal
+            );
+            
             transferFrom(
                 address(this),
                 memberDetails[proposalDetails[_proposalId].listOfMembersId[i]]

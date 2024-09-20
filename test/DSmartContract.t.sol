@@ -33,7 +33,7 @@ contract DSmartContractTest is Test {
             true
         );
         dSmartContract.createProposal("My first proposal", 120, 1, 20);
-        assertEq(dSmartContract.isProposal(0), true);
+        assertEq(dSmartContract.isProposal(1), true);
         vm.stopPrank();
     }
 
@@ -79,7 +79,7 @@ contract DSmartContractTest is Test {
             true
         );
         dSmartContract.createProposal("My first proposal", 120, 1, 20);
-        assertEq(dSmartContract.isProposal(0), true);
+        assertEq(dSmartContract.isProposal(1), true);
         vm.stopPrank();
     }
 
@@ -94,11 +94,11 @@ contract DSmartContractTest is Test {
         );
 
         dSmartContract.createProposal("My first proposal", 240, 1, 20);
-        assertEq(dSmartContract.isProposal(0), true);
+        assertEq(dSmartContract.isProposal(1), true);
 
         assertEq(
             dSmartContract.memberHasVotedOrNot(
-                0,
+                1,
                 0xD79a0889091D0c2a29A4Dc2f395a0108c69820Cf
             ),
             true
@@ -114,23 +114,36 @@ contract DSmartContractTest is Test {
             true
         );
 
-        dSmartContract.voteProposal(0, 2);
+        dSmartContract.voteProposal(1, 2);
 
         assertEq(
             dSmartContract.memberHasVotedOrNot(
-                0,
+                1,
                 0x04c1A796D9049ce70c2B4A188Ae441c4c619983c
             ),
             true
         );
 
         vm.warp(block.timestamp + 250);
-        dSmartContract.executeProposal(0);
-        assertEq(dSmartContract.checkExecutedOrNot(0), true);
+        dSmartContract.executeProposal(1);
+        assertEq(dSmartContract.checkExecutedOrNot(1), true);
 
         vm.stopPrank();
     }
-    
+
+    function test_challengeProposal() public {
+        setUp();
+        vm.startPrank(0xD79a0889091D0c2a29A4Dc2f395a0108c69820Cf);
+        dSmartContract.addMember();
+        dSmartContract.createProposal("My new proposal", 240, 1, 20);
+        vm.warp(block.timestamp + 250);
+        dSmartContract.executeProposal(1);
+        assertEq(dSmartContract.checkExecutedOrNot(1), true);
+        dSmartContract.challengingProposal("It's a proposal", 1);
+        assertEq(dSmartContract.checkExecutedOrNot(1), false);
+        vm.stopPrank();
+    }
+
     function testFail_addMember() public {
         vm.startPrank(0xD79a0889091D0c2a29A4Dc2f395a0108c69820Cf);
         setUp();
@@ -152,7 +165,7 @@ contract DSmartContractTest is Test {
         );
 
         dSmartContract.createProposal("My second proposal", 240, 1, 20);
-        assertEq(dSmartContract.isProposal(0), false);
+        assertEq(dSmartContract.isProposal(1), false);
         vm.stopPrank();
     }
 
@@ -213,7 +226,7 @@ contract DSmartContractTest is Test {
         );
 
         dSmartContract.createProposal("My new proposal", 240, 1, 20);
-        assertEq(dSmartContract.isProposal(0), true);
+        assertEq(dSmartContract.isProposal(1), true);
 
         vm.stopPrank();
 
@@ -238,6 +251,21 @@ contract DSmartContractTest is Test {
 
         dSmartContract.executeProposal(0);
         assertEq(dSmartContract.checkExecutedOrNot(0), false);
+        vm.stopPrank();
+    }
+
+    function testFail_challengeProposal() public {
+        setUp();
+        vm.startPrank(0xD79a0889091D0c2a29A4Dc2f395a0108c69820Cf);
+        dSmartContract.addMember();
+        dSmartContract.createProposal("My new proposal", 240, 1, 20);
+        vm.warp(block.timestamp + 250);
+        dSmartContract.executeProposal(1);
+        assertEq(dSmartContract.checkExecutedOrNot(1), true);
+        vm.stopPrank();
+        vm.startPrank(0x04c1A796D9049ce70c2B4A188Ae441c4c619983c);
+        dSmartContract.challengingProposal("It's a proposal", 1);
+        assertEq(dSmartContract.checkExecutedOrNot(1), false);
         vm.stopPrank();
     }
 }
