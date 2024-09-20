@@ -7,8 +7,7 @@ import "../lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 contract DSmartContract is ERC20 {
     struct MemberDetails {
         address memberAddress;
-        uint256 memberSince;
-        uint256 tokens;
+        uint256 tokensLocked;
         uint256[] noOfProposalsCreated;
         uint256[] noOfProposalsVoted;
     }
@@ -18,7 +17,10 @@ contract DSmartContract is ERC20 {
         uint256 voteCount;
         uint256 timePeriod;
         uint256 tokensForProposal;
+        uint256[] listOfMembersId;
         bool executedOrNot;
+        string reasonToChallenge;
+        uint256 challengedVotes;
     }
 
     uint256 public memberId;
@@ -46,45 +48,11 @@ contract DSmartContract is ERC20 {
 
         memberId = memberId + 1;
         memberDetails[memberId].memberAddress = msg.sender;
-        memberDetails[memberId].memberSince = block.timestamp;
-        memberDetails[memberId].tokens = 100;
+        memberDetails[memberId].tokensLocked = 100;
         totalTokens = totalTokens + 100;
         totalActiveMembers = totalActiveMembers + 1;
         membersList[msg.sender] = true;
         _mint(address(this), 100);
-    }
-
-    function createProposal(
-        string memory _proposalDescription,
-        uint256 _timePeriod,
-        uint256 _memberId,
-        uint256 _tokensForProposal
-    ) public {
-        require(
-            membersList[msg.sender] == true,
-            "Only members can create a proposal"
-        );
-        require(
-            proposalsList[proposalId] == false,
-            "Proposal already registered"
-        );
-        proposalDetails[proposalId].proposalDescription = _proposalDescription;
-        proposalDetails[proposalId].voteCount =
-            proposalDetails[proposalId].voteCount +
-            1;
-        proposalDetails[proposalId].timePeriod =
-            block.timestamp +
-            _timePeriod *
-            1 seconds;
-        proposalDetails[proposalId].tokensForProposal = _tokensForProposal;
-        proposalDetails[proposalId].executedOrNot = false;
-        totalTokens = totalTokens + _tokensForProposal;
-        proposalVotingRecord[proposalId][msg.sender] = true;
-        memberDetails[memberId].noOfProposalsCreated.push(proposalId);
-        memberDetails[_memberId].noOfProposalsVoted.push(proposalId);
-        proposalsList[proposalId] = true;
-        proposalId = proposalId + 1;
-        _mint(address(this), _tokensForProposal);
     }
 
     function removeMember(address _memberAddress) public {
@@ -101,7 +69,54 @@ contract DSmartContract is ERC20 {
         membersList[_memberAddress] = false;
     }
 
-    function voteProposal(uint256 _proposalId) public {
+    function createProposal(
+        string memory _proposalDescription,
+        uint256 _timePeriod,
+        uint256 _memberId,
+        uint256 _tokensForProposal
+    ) public {
+        require(
+            membersList[msg.sender] == true,
+            "Only members can create a proposal"
+        );
+        require(
+            proposalsList[proposalId] == false,
+            "Proposal already registered"
+        );
+
+        proposalId = proposalId + 1;
+        proposalDetails[proposalId].proposalDescription = _proposalDescription;
+
+        proposalDetails[proposalId].voteCount =
+            proposalDetails[proposalId].voteCount +
+            1;
+
+        proposalDetails[proposalId].timePeriod =
+            block.timestamp +
+            _timePeriod *
+            1 seconds;
+
+        proposalDetails[proposalId].tokensForProposal = _tokensForProposal;
+
+        proposalDetails[proposalId].executedOrNot = false;
+
+        proposalDetails[proposalId].listOfMembersId.push(_memberId);
+
+        totalTokens = totalTokens + _tokensForProposal;
+
+        proposalVotingRecord[proposalId][msg.sender] = true;
+
+        memberDetails[_memberId].noOfProposalsCreated.push(proposalId);
+
+        memberDetails[_memberId].noOfProposalsVoted.push(proposalId);
+
+        proposalsList[proposalId] = true;
+
+        _mint(address(this), _tokensForProposal);
+    }
+
+
+    function voteProposal(uint256 _proposalId, uint256 _memberId) public {
         require(
             membersList[msg.sender] == true,
             "Only the members can vote on the proposal"
@@ -116,6 +131,7 @@ contract DSmartContract is ERC20 {
             block.timestamp <= proposalDetails[_proposalId].timePeriod,
             "proposal has expired"
         );
+
         require(
             proposalVotingRecord[_proposalId][msg.sender] == false,
             "member has already voted"
@@ -124,15 +140,17 @@ contract DSmartContract is ERC20 {
         proposalDetails[_proposalId].voteCount =
             proposalDetails[_proposalId].voteCount +
             1;
+        proposalDetails[_proposalId].listOfMembersId.push(_memberId);
         proposalVotingRecord[_proposalId][msg.sender] = true;
-        memberDetails[memberId].noOfProposalsVoted.push(proposalId);
-        memberDetails[memberId].tokens =
-            memberDetails[memberId].tokens +
+        
+        memberDetails[_memberId].noOfProposalsVoted.push(proposalId);
+        memberDetails[_memberId].tokensLocked =
+            memberDetails[_memberId].tokensLocked +
             proposalDetails[_proposalId].tokensForProposal;
         _mint(address(this), proposalDetails[_proposalId].tokensForProposal);
     }
 
-    function executeProposal(uint256 _proposalId) public payable {
+    function executeProposal(uint256 _proposalId) public {
         require(
             membersList[msg.sender] == true,
             "only members can execute proposal"
@@ -154,12 +172,62 @@ contract DSmartContract is ERC20 {
         proposalDetails[_proposalId].executedOrNot = true;
     }
 
+    function challengingProposal(
+        string memory _reasonToChallenge,
+        uint256 _proposalId
+    ) public {
+        require(
+            membersList[msg.sender] == true,
+            "only members can challenge the proposal"
+        );
+
+        require(
+            proposalDetails[_proposalId].executedOrNot == true,
+            "proposal still not executed"
+        );
+
+        proposalDetails[_proposalId].reasonToChallenge = _reasonToChallenge;
+        proposalDetails[_proposalId].challengedVotes =
+            proposalDetails[_proposalId].challengedVotes +
+            1;
+
+        if (
+            proposalDetails[_proposalId].challengedVotes >
+            totalActiveMembers / 2
+        ) {
+            revokeExecution(_proposalId);
+        }
+    }
+
+    function revokeExecution(uint256 _proposalId) internal {
+        proposalDetails[_proposalId].executedOrNot = false;
+
+        for (
+            uint256 i = 0;
+            i < proposalDetails[_proposalId].listOfMembersId.length;
+            i++
+        ) {
+            memberDetails[proposalDetails[_proposalId].listOfMembersId[i]]
+                .tokensLocked =
+                memberDetails[proposalDetails[_proposalId].listOfMembersId[i]]
+                    .tokensLocked -
+                proposalDetails[_proposalId].tokensForProposal;
+
+            transferFrom(
+                address(this),
+                memberDetails[proposalDetails[_proposalId].listOfMembersId[i]]
+                    .memberAddress,
+                proposalDetails[_proposalId].tokensForProposal
+            );
+        }
+    }
+
     function tokensStaked(uint256 _memberId) public view returns (uint256) {
         require(
             msg.sender == memberDetails[_memberId].memberAddress,
             "only member can view there tokens"
         );
-        return memberDetails[_memberId].tokens;
+        return memberDetails[_memberId].tokensLocked;
     }
 
     function checkExecutedOrNot(

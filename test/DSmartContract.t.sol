@@ -114,7 +114,7 @@ contract DSmartContractTest is Test {
             true
         );
 
-        dSmartContract.voteProposal(0);
+        dSmartContract.voteProposal(0, 2);
 
         assertEq(
             dSmartContract.memberHasVotedOrNot(
@@ -130,7 +130,7 @@ contract DSmartContractTest is Test {
 
         vm.stopPrank();
     }
-
+    
     function testFail_addMember() public {
         vm.startPrank(0xD79a0889091D0c2a29A4Dc2f395a0108c69820Cf);
         setUp();
@@ -194,7 +194,7 @@ contract DSmartContractTest is Test {
         vm.stopPrank();
 
         vm.startPrank(0x04c1A796D9049ce70c2B4A188Ae441c4c619983c);
-        dSmartContract.voteProposal(0);
+        dSmartContract.voteProposal(0, 2);
         assertEq(
             dSmartContract.memberHasVotedOrNot(
                 0,
@@ -224,7 +224,7 @@ contract DSmartContractTest is Test {
             true
         );
 
-        dSmartContract.voteProposal(0);
+        dSmartContract.voteProposal(0, 2);
 
         assertEq(
             dSmartContract.memberHasVotedOrNot(
